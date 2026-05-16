@@ -1,0 +1,43 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function ownsUserDocument(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    match /deals/{dealId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /videos/{videoId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if signedIn();
+      allow update: if signedIn()
+        && request.resource.data.diff(resource.data).changedKeys().hasOnly(['isRead']);
+      allow create, delete: if false;
+    }
+
+    match /users/{uid} {
+      allow create: if ownsUserDocument(uid);
+      allow read: if ownsUserDocument(uid);
+      allow update: if ownsUserDocument(uid)
+        && request.resource.data.diff(resource.data).changedKeys().hasOnly(['name', 'savedDeals']);
+      allow delete: if false;
+    }
+  }
+}
